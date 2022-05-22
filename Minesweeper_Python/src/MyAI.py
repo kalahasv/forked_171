@@ -56,6 +56,8 @@ class MyAI( AI ):
         self.refLabel[startX, startY] = 'U'
         
         self.moves = [] # list all actions to do
+        self.frontier_covered = [] # list of all covered frontiers
+        self.frontier_uncovered = set() # list 
         self.solvable = False
         self.p = 0 # probability of a mine 
         self.time_elapsed = 0.0
@@ -90,12 +92,12 @@ class MyAI( AI ):
         ########################################################################
        
             #win condition= uncovered all except one tile
-            self.numTiles()
             
-            if len(self.moves) == 0:
-                if (self.row * self.col) - self.numOfMines == self.numUncoveredtiles:
-                    #print('Done')
-                    return Action(AI.Action.LEAVE)
+            
+            
+            if (self.row * self.col) - self.numOfMines == self.numUncoveredtiles:
+                #print('Done')
+                return Action(AI.Action.LEAVE)
 
             #check which tiles are uncovered relative to the current position
             #uncovered = [] #tiles uncovered relative to start position
@@ -108,45 +110,24 @@ class MyAI( AI ):
  
             #print('number of uncovered')
             #print(self.numUncoveredtiles)
-            self.ruleOfThumb()
-            
-            if self.solvable == False and self.numUncoveredtiles == 1:
-                temp = self.applyOpeningProb()
+            if len(self.moves) == 0:
+                #print('get moves')
+                self.find_moves() # get some moves
                 
-                if temp == False: # the probability is worse, then select one randomly
-                    self.chooseRandom()
+                if len(self.moves) == 0:   
                     
+                    #print('cannot find any')
+                    return Action(AI.Action.LEAVE)
+                
+            if len(self.moves) == 0 and len(self.frontier_uncovered) == 1:
+                self.getSimpleProb()
+                t = self.applyOpeningProb
+                
+                
                     
-                
             
-            #if len(self.moves) == 0:
-                #print('Tackle Frontier')
-                #self.tackleFrontier()
-            
-            #print(len(self.moves))
-            if len(self.moves) != 0:
-                next_move = self.moves.pop()
-                
-                self.amove = next_move
-            
-                return next_move
-            #if self.numUncoveredtiles < (self.row * self.col) - self.numOfMines:
-                #self.rescan()
+                    
 
-            if self.solvable == False or len(self.moves) == 0:
-                #print('cannot do ROT')
-                self.chooseRandom()
-            
-            #if len(self.moves) == 0:
-                
-                #if (self.row * self.col) - self.numOfMines == self.numUncoveredtiles:
-                    #print('equal')
-                    #return Action(AI.Action.LEAVE)
-                
-            
-                
-                
-            
                 
             next_move = self.moves.pop()
                 
@@ -169,6 +150,49 @@ class MyAI( AI ):
         ########################################################################
         #                           YOUR CODE ENDS                             #
         ########################################################################
+        
+    def find_moves(self):
+        
+        #print(self.frontier_covered)
+        #print(self.frontier_uncovered)
+        while True:
+            
+            if len(self.moves) != 0: # has stuff to do
+                #print('has stuff to do')
+                
+                return
+            
+            self.numTiles()
+            if (self.row * self.col) - self.numOfMines == self.numUncoveredtiles: # goal
+                
+                #print('appending the end')
+                self.moves.append(Action(AI.Action.LEAVE))
+                return
+            
+            if len(self.frontier_covered) == 0: # frontier is empty
+                
+                
+                self.scan() # find a move
+                
+                if len(self.frontier_covered) == 0 and len(self.moves) == 0: # if still cannot find a move do a random move
+                    
+                    
+                    
+                    #print('random')
+                    self.chooseRandom()
+                    
+                    return
+            
+            coords = self.frontier_covered.pop()
+            
+            if self.refLabel[coords[0], coords[1]] == 'U':
+                continue
+            
+            self.ruleOfThumb(coords[0], coords[1])
+            
+                
+            
+        
     def getSimpleProb(self): # probability of each tile being a bomb without prior knowledge
         n = self.numOfMines
         num = 0
@@ -183,7 +207,10 @@ class MyAI( AI ):
     def applyOpeningProb(self):
         num = self.label[self.amove.getX(), self.amove.getY()]
         
-        if num / 8 < self.p: # uncover one of the random spots around the tile
+        adj = self.getAdjacent(self.amove.getX(), self.amove.getY())
+        
+        
+        if num / len(adj) < self.p: # uncover one of the random spots around the tile
             
             explore = self.getAdjacent(self.amove.getX(), self.amove.getY())
             coords = random.choice(explore)
@@ -209,112 +236,78 @@ class MyAI( AI ):
     #def getFrontier(self, x, y):
         
         
-    def tackleFrontier(self):
-        temp_coords = []
-        adj = []
-        #print(self.row, self.col)
-        #print(self.refLabel)
-        for x in range(self.row):
-            for y in range(self.col):
-                if self.refLabel[x, y] == '': # find all the covered and unflag ones
-                    temp_coords.append((x, y))
+    def scan(self):
+        for i in range(self.row):
+            for j in range(self.col):
+                
+                if self.label[i, j] >=0:
+                    self.ruleOfThumb(i, j)
                     
-        #print(temp_coords)
-        
-        
-        if len(temp_coords) <= 8:
-            
-            for c in temp_coords:
-                temp = self.getAdjacent(c[0], c[1]) # get all the adjacent nodes of the covered and unflag ones, make sure it is uncovered
-                for y in temp:
-                    if self.refLabel[y[0], y[1]] != '': 
-                        adj.append(y)
-            
-            
-        my_list = list(set(adj))
-        
-        
-        
-        #print(my_list)
-        test = False
-        for x in my_list:
-            temp_adj = self.getAdjacent(x[0], x[1])
                 
-            noFlag = self.countNoFlag(temp_adj) # get all the number of no flags of the current move
-            #yesFlag = self.countFlag(temp_adj) # get all the number of flags of the current move
-            #print(noFlag)
-            if self.elabel[x[0], x[1]] == 0: #  check if effective label == 0 
-                #print('effect == 0')
-
-                for i in temp_adj:
-                    if self.refLabel[i[0], i[1]] == '':
-                        self.moves.append(Action(AI.Action.UNCOVER, i[0], i[1]))
-                        self.refLabel[i[0], i[1]] = 'U'
-                        #self.numUncoveredtiles += 1
-                test = True
-            elif self.elabel[x[0], x[1]] == noFlag:
-                #print('flaggging')
-                for i in temp_adj:
-                    if self.refLabel[i[0], i[1]] == '':
-                        self.moves.append(Action(AI.Action.FLAG, i[0], i[1]))
-                        self.refLabel[i[0], i[1]] = 'F'
-                        
-                    temporary = self.getAdjacent(x[0], x[1])
-                
-                    for x1 in temporary:
-                        if self.refLabel[x1[0], x1[1]] != '':
-                            self.label[x1[0], x1[1]] -= 1
-                test = True
-            
-        self.solvable = test
-    
         
-    def ruleOfThumb(self):
+    def ruleOfThumb(self, x, y):
         #print('ROT')
         test = False
         #print(self.amove.getX(), self.amove.getY())
-        adj = self.getAdjacent(self.amove.getX(), self.amove.getY()) # get all the adjacent of the current move
+        adj = self.getAdjacent(x, y) # get all the adjacent of the current move
         noFlag = self.countNoFlag(adj) # get all the number of no flags of the current move
         yesFlag = self.countFlag(adj) # get all the number of flags of the current move
         
         ## effective label
-        self.elabel[self.amove.getX(), self.amove.getY()] = self.label[self.amove.getX(), self.amove.getY()] - yesFlag
-        #print(self.elabel)
+        self.elabel[x, y] = self.label[x, y] - yesFlag
         
-        if self.elabel[self.amove.getX(), self.amove.getY()] == 0: # effective label  == 0
+        #print(x, y)
+        if self.label[x, y] < 0:
+            #print('big oof')
+            return
+            
+        
+        if self.elabel[x, y] == 0: # effective label  == 0
             #print('effective == 0')
-            for x in adj:
-                if self.refLabel[x[0], x[1]] == '':
+            for t in adj:
+                if self.refLabel[t[0], t[1]] == '': # if untouched
                     
                     #print('undiscovered tile and now inserting')
-                    self.moves.append(Action(AI.Action.UNCOVER, x[0], x[1]))
-                    self.refLabel[x[0], x[1]] = 'U'
+                    self.moves.append(Action(AI.Action.UNCOVER, t[0], t[1]))
+                    #self.refLabel[x[0], x[1]] = 'U'
+                    #self.frontier_covered.append(x) # frontier covered around the 
                     #self.numUncoveredtiles += 1
                  
             
             test = True    
         
         
-        elif self.elabel[self.amove.getX(), self.amove.getY()] == noFlag: # effective label == #no flags
+        elif self.elabel[x, y] == noFlag: # effective label == #no flags
             #print('Flag')
-            for x in adj:
-                if self.refLabel[x[0], x[1]] == '':
+            for t in adj:
+                if self.refLabel[t[0], t[1]] == '':
                     
                     #print('undiscovered tile and now inserting')
-                    self.moves.append(Action(AI.Action.FLAG, x[0], x[1]))
-                    self.refLabel[x[0], x[1]] = 'F'
+                    self.moves.append(Action(AI.Action.FLAG, t[0], t[1]))
+                    self.refLabel[t[0], t[1]] = 'F'
                     
-                temporary = self.getAdjacent(x[0], x[1])
+                temporary = self.getAdjacent(t[0], t[1])
                 
                 for x1 in temporary:
                     if self.refLabel[x1[0], x1[1]] != '':
-                        self.label[x1[0], x1[1]] -= 1
+                        self.elabel[x1[0], x1[1]] -= 1
             test = True
         
+        else:
+            #print('not done anything')
+            return
         
         self.solvable = test
-            
         
+        for a in adj:
+            if a not in  self.frontier_covered:
+                self.frontier_covered.append(a) # get all the adjacents of the original adjacent as a frontier
+        
+        
+        if self.refLabel[x, y] == 'U':
+            self.frontier_uncovered.add((x, y))
+    
+    
     def countFlag(self, coords):
         
         yesFlag = 0
