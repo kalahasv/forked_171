@@ -144,7 +144,7 @@ class MyAI( AI ):
                 if not self.elabel[self.amove.getX(), self.amove.getY()] == 0 and not self.elabel[self.amove.getX(), self.amove.getY()] == numNoFlagged:
                     #print(self.elabel[self.amove.getX(), self.amove.getY()])
                     #print(numNoFlagged)
-                    #print('special case') s
+                    print('special case')
                     
                     d = self.specialUncover()
                     #print("D was found to be false")
@@ -179,7 +179,7 @@ class MyAI( AI ):
  
                 ## make a random guess
                 
-                    #print("random guess")
+                print("random guess")
                 coordinates = self.chooseRandom()
                 self.refLabel[coordinates[0], coordinates[1]] = 'U'
                 self.amove = Action(AI.Action.UNCOVER, coordinates[0], coordinates[1])
