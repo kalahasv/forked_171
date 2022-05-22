@@ -48,17 +48,18 @@ class MyAI( AI ):
  
         self.label = np.full((rowDimension, colDimension), -1)
         self.elabel = np.full((rowDimension, colDimension), -1)
-        self.refLabel = np.full((rowDimension, colDimension), "") # this creates a reference board, an empty string indicates the tile has not been touched yet
+        self.refLabel = np.full((rowDimension, colDimension), '') # this creates a reference board, an empty string indicates the tile has not been touched yet
         # we can label each tile as a flagged and uncovered
 
        
         self.amove = Action(AI.Action.UNCOVER, startX, startY) #uncovers the first move tile
         self.refLabel[startX, startY] = 'U'
         
-        self.number0 = [] # get the adjacent tiles that are uncovered and with number zero
-        self.numer1 = [] # gett the adjacent tiles that are uncovered and with a number 1
+        self.moves = [] # list all actions to do
+        self.solvable = False
+        self.p = 0 # probability of a mine 
         self.time_elapsed = 0.0
- 
+
        
  
        
@@ -79,7 +80,8 @@ class MyAI( AI ):
         if(remaining_time < 3):
             random_coords = self.chooseRandom()
             #print("hi")
-            return Action(AI.Action.UNCOVER, random_coords[0],random_coords[1])
+            
+        
         else:
             #print("Action start!")
             ts = time.time()
@@ -88,117 +90,71 @@ class MyAI( AI ):
         ########################################################################
        
             #win condition= uncovered all except one tile
-            if (self.row * self.col) - self.numOfMines == self.numUncoveredtiles:
-                #print('Done')
-                return Action(AI.Action.LEAVE)
- 
+            self.numTiles()
+            
+            if len(self.moves) == 0:
+                if (self.row * self.col) - self.numOfMines == self.numUncoveredtiles:
+                    #print('Done')
+                    return Action(AI.Action.LEAVE)
+
             #check which tiles are uncovered relative to the current position
             #uncovered = [] #tiles uncovered relative to start position
            
-            if number >= 0: # if the number is non negative then we work on the board
+            if number != -1: # if the number is non negative then we work on the board
  
                 self.refLabel[self.amove.getX(), self.amove.getY()] = 'U' # u indicates uncovered
                 self.label[self.amove.getX(), self.amove.getY()] = number # the number of adjacent bombs
-                
-                
-                if number == 0: # get the coordinates of those tile with zero bombs
-                    self.number0.append((self.amove.getX(), self.amove.getY()))
- 
-                numFlagged, numNoFlagged = self.markedOrUnmarked(self.amove.getX(), self.amove.getY())
- 
-                # EffectiveLabel(x) = Label(x) – NumMarkedNeighbors(x)
-           
-                self.elabel[self.amove.getX(), self.amove.getY()] = self.label[self.amove.getX(), self.amove.getY()] - numFlagged
- 
-               
-                   
- 
-                if self.elabel[self.amove.getX(), self.amove.getY()] == 0: # uncover all unmarked neighbors
-                   
-                    #print('Uncover all unmarked neighbors')
-                   
-                    #print(self.elabel[self.amove.getX(), self.amove.getY()])
- 
-                    result = self.unCoverAll(self.amove.getX(), self.amove.getY(),ts)
-                    
-                    if result != None:
-                        return result
-                
-                    
-                    
-                ## Rule of thumb
-                if self.elabel[self.amove.getX(), self.amove.getY()] == numNoFlagged: # mark all unmarked neighbors
-                   
-                    #print('Mark all neighbors')
-                   
-                    #print(self.elabel[self.amove.getX(), self.amove.getY()])
- 
- 
-                    self.coverAll(self.amove.getX(), self.amove.getY(),ts)
-                     
-                     
-                ## Get get the adjacent tile with no bombs or less likey to be a bomb
-                ref_c = [  self.amove.getX(),self.amove.getY()]
-                
-                
-                if not self.elabel[self.amove.getX(), self.amove.getY()] == 0 and not self.elabel[self.amove.getX(), self.amove.getY()] == numNoFlagged:
-                    #print(self.elabel[self.amove.getX(), self.amove.getY()])
-                    #print(numNoFlagged)
-                    print('special case')
-                    
-                    d = self.specialUncover()
-                    #print("D was found to be false")
-                    if d == False:
-                        #print('minMaxTest')
-                        d = self.minMaxTile()
-                        #print("min max didn't work, D is still false")
-                        if d == False:
-                            #print('random case')
-                            coordinates = self.chooseRandom()
-                            self.refLabel[coordinates[0], coordinates[1]] = 'U'
-                            self.amove = Action(AI.Action.UNCOVER, coordinates[0], coordinates[1])
-                        
 
-                            self.numUncoveredtiles +=1
-
-
-                            return self.amove
-                        else:
-                            return d
-                    
  
-                    else:
-                       
-                        return d
-                        
-                        
-                        
-                        
-                    
-                #print('no case hehe')
- 
-                ## make a random guess
+            #print('number of uncovered')
+            #print(self.numUncoveredtiles)
+            self.ruleOfThumb()
+            
+            if self.solvable == False and self.numUncoveredtiles == 1:
+                temp = self.applyOpeningProb()
                 
-                print("random guess")
-                coordinates = self.chooseRandom()
-                self.refLabel[coordinates[0], coordinates[1]] = 'U'
-                self.amove = Action(AI.Action.UNCOVER, coordinates[0], coordinates[1])
+                if temp == False: # the probability is worse, then select one randomly
+                    self.chooseRandom()
+                    
+                    
+                
+            
+            #if len(self.moves) == 0:
+                #print('Tackle Frontier')
+                #self.tackleFrontier()
+            
+            #print(len(self.moves))
+            if len(self.moves) != 0:
+                next_move = self.moves.pop()
+                
+                self.amove = next_move
+            
+                return next_move
+            #if self.numUncoveredtiles < (self.row * self.col) - self.numOfMines:
+                #self.rescan()
 
-                self.numUncoveredtiles +=1
- 
-                return self.amove
- 
-               
-           
-                #print('c')
-                #print(self.numUncoveredtiles)
-                #print(self.amove.getX(), self.amove.getY())
-                #print(self.elabel[self.amove.getX(), self.amove.getY()])
-                #print("oh we're leaving now?")
-                return Action(AI.Action.LEAVE)
-            #else:
-                #print("The number is negative and we don't know what to do! Number: ", number)
- 
+            if self.solvable == False or len(self.moves) == 0:
+                #print('cannot do ROT')
+                self.chooseRandom()
+            
+            #if len(self.moves) == 0:
+                
+                #if (self.row * self.col) - self.numOfMines == self.numUncoveredtiles:
+                    #print('equal')
+                    #return Action(AI.Action.LEAVE)
+                
+            
+                
+                
+            
+                
+            next_move = self.moves.pop()
+                
+            self.amove = next_move
+            
+            return next_move
+                
+            
  
            
  
@@ -213,574 +169,192 @@ class MyAI( AI ):
         ########################################################################
         #                           YOUR CODE ENDS                             #
         ########################################################################
-        
-    def minMaxTile(self):
-
-        explore = []
-        for x in range(0, self.row):
-            for y in range(0, self.col):
-                if self.refLabel[x, y] == '': # if empty string then we explore
-                    explore.append((x, y))
+    def getSimpleProb(self): # probability of each tile being a bomb without prior knowledge
+        n = self.numOfMines
+        num = 0
+        for x in range(self.row):
+            for y in range(self.col):
+                if self.refLabel == '':
+                    num +=1
                     
-        max_coords = (-1, -1)
-        max_value = 10000000000000000
+        self.p = n / num
         
+    
+    def applyOpeningProb(self):
+        num = self.label[self.amove.getX(), self.amove.getY()]
         
-        # finds the one with the min value of adjacent bombs near it
-        #print(explore)
-        for x in explore:
-            #print("Coordinates going into special check:",x[0]," ",x[1])
-            temp = self.specialCheck(x[0], x[1])
-            #print("We got through special check")
-           # print("temporary value",temp)
+        if num / 8 < self.p: # uncover one of the random spots around the tile
             
-            if temp < max_value: 
-                max_value = temp
-                max_coords = (x[0], x[1])
-           # print("Max coords",max_coords)
-        #print("we got to the value")
-        if max_value != 0:
+            explore = self.getAdjacent(self.amove.getX(), self.amove.getY())
+            coords = random.choice(explore)
             
-            #print(max_value)
-            #print(max_coords)
+            self.moves.append(Action(AI.Action.UNCOVER, coords[0], coords[1]))
+            self.refLabel[coords[0], coords[1]] = 'U'
             
-            self.refLabel[max_coords[0], max_coords[1]] = 'U'
-            self.amove = Action(AI.Action.UNCOVER, max_coords[0], max_coords[1])
-            self.numUncoveredtiles +=1
-            #print(max_coords[0], max_coords[1])
-            return self.amove
-        
-        else: 
-            #print("returning false")
+            return True
+        else:
             return False
-            
         
         
-    def specialCheck(self, x, y):
-        num = 0 
-        if self.tileinBounds(x - 1, y) and self.refLabel[x - 1, y] != '': 
-            num += self.label[x - 1, y]
-       # print("First check done")
-        if self.tileinBounds(x - 1, y + 1) and self.refLabel[x - 1, y + 1] != '': 
-            #print("in bounds")
-            num += self.label[x - 1, y + 1]
-       # print("Second Check done")
-        if self.tileinBounds(x - 1, y - 1) and self.refLabel[x - 1, y - 1] != '': 
-            num += self.label[x - 1, y - 1]
-        # right
-       # print("Third Check done")
-        if self.tileinBounds(x + 1, y) and self.refLabel[x + 1, y] != '': 
-            num += self.label[x + 1, y]
-        #print("Third Check done")
-        if self.tileinBounds(x + 1, y - 1) and self.refLabel[x + 1, y - 1] != '': 
-            num += self.label[x + 1, y - 1]
-            
-        if self.tileinBounds(x + 1, y + 1) and self.refLabel[x + 1, y + 1] != '':
-       #     print("in bounds")
-            num += self.label[x + 1, y + 1]
- 
-        #top
-        if self.tileinBounds(x, y + 1) and self.refLabel[x, y + 1] != '':
-        #    print("in bounds")
-            num += self.label[x, y+1] 
- 
-        #bottom
-        if self.tileinBounds(x, y - 1) and self.refLabel[x, y - 1] != '': 
-            num += self.label[x, y - 1]
-
-       # print("nothing in bounds")
-        return num
-    
-    def specialUncover(self):
+    def numTiles(self):
+        num = 0
+        for x in range(self.row):
+            for y in range(self.col):
+                if self.refLabel[x, y] == 'U':
+                    num += 1
+        #print(self.refLabel)
+        self.numUncoveredtiles = num
         
         
-        explore = []
-        for x in range(0, self.row):
-            for y in range(0, self.col):
-                if self.refLabel[x, y] != '': # if empty string then we explore
-                    explore.append((x, y))
-                  
-                  
-     
+    #def getFrontier(self, x, y):
         
-        coords = False
-        for x in explore:
-            #print(x)
-            if self.label[x[0], x[1]] == 0:
-                
-                coords = self.getUntouchedAdjacent(x[0], x[1])
-                
-                if coords == False:
-                   # print('found none')
-                    continue
+        
+    def tackleFrontier(self):
+        temp_coords = []
+        adj = []
+        #print(self.row, self.col)
+        #print(self.refLabel)
+        for x in range(self.row):
+            for y in range(self.col):
+                if self.refLabel[x, y] == '': # find all the covered and unflag ones
+                    temp_coords.append((x, y))
                     
+        #print(temp_coords)
+        
+        
+        if len(temp_coords) <= 8:
+            
+            for c in temp_coords:
+                temp = self.getAdjacent(c[0], c[1]) # get all the adjacent nodes of the covered and unflag ones, make sure it is uncovered
+                for y in temp:
+                    if self.refLabel[y[0], y[1]] != '': 
+                        adj.append(y)
+            
+            
+        my_list = list(set(adj))
+        
+        
+        
+        #print(my_list)
+        test = False
+        for x in my_list:
+            temp_adj = self.getAdjacent(x[0], x[1])
                 
-                else:
-                    #print('found some')
-                    break
+            noFlag = self.countNoFlag(temp_adj) # get all the number of no flags of the current move
+            #yesFlag = self.countFlag(temp_adj) # get all the number of flags of the current move
+            #print(noFlag)
+            if self.elabel[x[0], x[1]] == 0: #  check if effective label == 0 
+                #print('effect == 0')
 
-        
-        if coords == False: #exhausted the amount of tiles with zero bombs near it that are yet to be uncovered
-             return False
+                for i in temp_adj:
+                    if self.refLabel[i[0], i[1]] == '':
+                        self.moves.append(Action(AI.Action.UNCOVER, i[0], i[1]))
+                        self.refLabel[i[0], i[1]] = 'U'
+                        #self.numUncoveredtiles += 1
+                test = True
+            elif self.elabel[x[0], x[1]] == noFlag:
+                #print('flaggging')
+                for i in temp_adj:
+                    if self.refLabel[i[0], i[1]] == '':
+                        self.moves.append(Action(AI.Action.FLAG, i[0], i[1]))
+                        self.refLabel[i[0], i[1]] = 'F'
+                        
+                    temporary = self.getAdjacent(x[0], x[1])
+                
+                    for x1 in temporary:
+                        if self.refLabel[x1[0], x1[1]] != '':
+                            self.label[x1[0], x1[1]] -= 1
+                test = True
             
-        new_coords = coords[0]
-        self.refLabel[new_coords[0], new_coords[1]] = 'U'
-        self.amove = Action(AI.Action.UNCOVER, new_coords[0], new_coords[1])
-        self.numUncoveredtiles +=1
-        
-        return self.amove
-        
+        self.solvable = test
     
-    def getUntouchedAdjacent(self, x, y):
-        temp = []
-        #print('check untouched adjacent')
-        if self.tileinBounds(x - 1, y) and self.refLabel[x - 1, y] == '':  
-            temp.append((x - 1, y)) 
-            return temp
         
-        if self.tileinBounds(x - 1, y + 1) and self.refLabel[x - 1, y + 1] == '': 
-            temp.append((x - 1, y + 1))
-            return temp
+    def ruleOfThumb(self):
+        #print('ROT')
+        test = False
+        #print(self.amove.getX(), self.amove.getY())
+        adj = self.getAdjacent(self.amove.getX(), self.amove.getY()) # get all the adjacent of the current move
+        noFlag = self.countNoFlag(adj) # get all the number of no flags of the current move
+        yesFlag = self.countFlag(adj) # get all the number of flags of the current move
         
-        if self.tileinBounds(x - 1, y - 1) and self.refLabel[x - 1, y - 1] == '': 
-            temp.append((x - 1, y - 1))
-            return temp
- 
-        # right
-        if self.tileinBounds(x + 1, y) and self.refLabel[x + 1, y] == '': 
-            temp.append((x + 1, y))
-            return temp
+        ## effective label
+        self.elabel[self.amove.getX(), self.amove.getY()] = self.label[self.amove.getX(), self.amove.getY()] - yesFlag
+        #print(self.elabel)
         
-        
-        if self.tileinBounds(x + 1, y - 1) and self.refLabel[x + 1, y - 1] == '': 
+        if self.elabel[self.amove.getX(), self.amove.getY()] == 0: # effective label  == 0
+            #print('effective == 0')
+            for x in adj:
+                if self.refLabel[x[0], x[1]] == '':
+                    
+                    #print('undiscovered tile and now inserting')
+                    self.moves.append(Action(AI.Action.UNCOVER, x[0], x[1]))
+                    self.refLabel[x[0], x[1]] = 'U'
+                    #self.numUncoveredtiles += 1
+                 
             
-            temp.append((x + 1, y - 1))
-            return temp
+            test = True    
         
-        if self.tileinBounds(x + 1, y + 1) and self.refLabel[x + 1, y + 1] == '': 
-            temp.append((x + 1, y + 1))
-            return temp
- 
-        #top
-        if self.tileinBounds(x, y + 1) and self.refLabel[x, y + 1] == '': 
-            temp.append((x, y + 1))
-            return temp
-        #bottom
-        if self.tileinBounds(x, y - 1) and self.refLabel[x, y - 1] == '': 
-            temp.append((x, y - 1))
-            return temp
         
+        elif self.elabel[self.amove.getX(), self.amove.getY()] == noFlag: # effective label == #no flags
+            #print('Flag')
+            for x in adj:
+                if self.refLabel[x[0], x[1]] == '':
+                    
+                    #print('undiscovered tile and now inserting')
+                    self.moves.append(Action(AI.Action.FLAG, x[0], x[1]))
+                    self.refLabel[x[0], x[1]] = 'F'
+                    
+                temporary = self.getAdjacent(x[0], x[1])
+                
+                for x1 in temporary:
+                    if self.refLabel[x1[0], x1[1]] != '':
+                        self.label[x1[0], x1[1]] -= 1
+            test = True
+        
+        
+        self.solvable = test
+            
+        
+    def countFlag(self, coords):
+        
+        yesFlag = 0
+        for x in coords:
+
+                
+            if self.refLabel[x[0], x[1]] == 'F':
+                yesFlag +=1
+                
+        return yesFlag
     
-        #print('no adjacent found')
-        return False
-      
-    def updateELabel(self, x, y):
-        #left
-        if self.tileinBounds(x - 1, y): self.elabel[x - 1, y] -= 1
-        if self.tileinBounds(x - 1, y + 1): self.elabel[x - 1, y + 1] -= 1
-        if self.tileinBounds(x - 1, y - 1): self.elabel[x - 1, y - 1] -= 1
- 
-        # right
-        if self.tileinBounds(x + 1, y): self.elabel[x + 1, y] -= 1
-        if self.tileinBounds(x + 1, y - 1): self.elabel[x + 1, y - 1] -= 1
-        if self.tileinBounds(x + 1, y + 1): self.elabel[x + 1, y + 1] -= 1
- 
-        #top
-        if self.tileinBounds(x, y + 1): self.elabel[x, y + 1] -= 1
- 
-        #bottom
-        if self.tileinBounds(x, y - 1): self.elabel[x, y - 1] -= 1
-       
-        return
-    def coverAll(self, x, y, ts):
-        # left side
-        ## left
-        #print("Hi, we're covering stuff now")
-        if self.tileinBounds(x - 1, y) and self.refLabel[x - 1, y] == '':  # if coordinates is valid and it is not touched yet
-            self.refLabel[x - 1, y] = 'F'
-            #print("hi, welcome to the left!")
-            self.amove = Action(AI.Action.FLAG, x - 1, y)
- 
-            #print('printing elabel before')
-            #print(self.elabel[x - 1, y])
-            self.updateELabel(x - 1, y)
-            #print('fin')
-           
- 
-            #time now
-            tE = time.time()
-            dt = tE-ts
-            self.time_elapsed += dt
- 
- 
-            return self.amove
-   
-        ## top left
-        if self.tileinBounds(x - 1, y + 1) and self.refLabel[x - 1, y + 1] == '':  
-           
-            #print("Hi welcome to the top left!")
-            self.refLabel[x - 1, y + 1] = 'F'
-            self.amove = Action(AI.Action.FLAG, x - 1, y + 1)
- 
-            #print('printing elabel before')
-            #print(self.elabel[x - 1, y + 1])
-            self.updateELabel(x - 1, y + 1)
-            #print('fin')
- 
- 
-            tE = time.time()
-            dt = tE-ts
-            self.time_elapsed += dt
- 
-            return self.amove
-       
-        ## bottom left
-        if self.tileinBounds(x - 1, y - 1) and self.refLabel[x - 1, y - 1] == '':
-           
-            #print("hi welcome to the bottom left")
-            self.refLabel[x - 1, y  - 1] = 'F'
-            self.amove = Action(AI.Action.FLAG, x - 1, y - 1)
- 
- 
-            #print('printing elabel before')
-            #print(self.elabel[x - 1, y - 1])
-            self.updateELabel(x - 1, y - 1)
-            #print('fin')
- 
-            tE = time.time()
-            dt = tE-ts
-            self.time_elapsed += dt
- 
-            return self.amove
-       
- 
-        # right side
- 
- 
-        ## right
-        if self.tileinBounds(x + 1, y) and self.refLabel[x + 1, y] == '':  
-           
-           
-            #print("hi welcome to the right!")
-            self.refLabel[x + 1, y] = 'F'
-            self.amove = Action(AI.Action.FLAG, x + 1, y)
- 
-            #print('printing elabel before')
-            #print(self.elabel[x + 1, y])
-            self.updateELabel(x + 1, y)
-            #print('fin')
- 
-            tE = time.time()
-            dt = tE-ts
-            self.time_elapsed += dt
- 
-            return self.amove
-       
-        ## top right
-        if self.tileinBounds(x + 1, y + 1)  and self.refLabel[x + 1, y + 1] == '':  
-           
-            #print("hi welcome to the top right")
- 
-            self.refLabel[x + 1, y + 1] = 'F'
-            self.amove = Action(AI.Action.FLAG, x + 1, y + 1)
- 
-            #print('printing elabel before')
-            #print(self.elabel[x + 1, y + 1])
-            self.updateELabel(x + 1, y + 1)
-            #print('fin')
- 
-            tE = time.time()
-            dt = tE-ts
-            self.time_elapsed += dt
- 
-            return self.amove
-       
-        ## bottom right
-        if self.tileinBounds(x + 1, y - 1) and self.refLabel[x + 1, y - 1] == '':
- 
-            #print("hi welcome to the bottom right")
-            self.refLabel[x + 1, y - 1] = 'F'
-            self.amove = Action(AI.Action.FLAG, x + 1, y - 1)
- 
-            #print('printing elabel before')
-            #print(self.elabel[x + 1, y - 1])
-            self.updateELabel(x + 1, y - 1)
-            #print('fin')
- 
- 
-            tE = time.time()
-            dt = tE - ts
-            self.time_elapsed += dt
- 
-            return self.amove
-       
- 
-        #top
-        if self.tileinBounds(x, y + 1) and self.refLabel[x, y + 1] == '':
-           
-            #print("hi welcome to top")
-            self.refLabel[x, y + 1] = 'F'
-            self.amove = Action(AI.Action.FLAG, x, y + 1)
- 
-            #print('printing elabel before')
-            #print(self.elabel[x, y + 1])
-            self.updateELabel(x, y + 1)
-            #print('fin')
- 
-            tE = time.time()
-            dt = tE-ts
-            self.time_elapsed += dt
- 
-            return self.amove
- 
-        #bottom
-        if self.tileinBounds(x, y - 1) and self.refLabel[x, y - 1] == '':  
-           
-            #print("hi welcome bottom")
-            self.refLabel[x, y - 1] = 'F'
- 
-            self.amove = Action(AI.Action.FLAG, x, y - 1)
- 
- 
-            #print('printing elabel before')
-            #print(self.elabel[x, y - 1])
-            self.updateELabel(x, y - 1)
-            #print('fin')
- 
-            tE = time.time()
-            dt = tE - ts
-            self.time_elapsed += dt
- 
-            return self.amove
- 
-    def unCoverAll(self, x, y,ts):
-       
-        #print('we at uncover now')
-        # left side
-        ## left
- 
-        #print("Checking left condition")
-        if self.tileinBounds(x - 1, y) and self.refLabel[x - 1, y] == '':  # if coordinates is valid and it is not touched yet
-            #print("hi, welcome to the left!")
- 
-            self.refLabel[x - 1, y] = 'U'
-           
- 
-            self.amove = Action(AI.Action.UNCOVER, x - 1, y)
-            self.numUncoveredtiles +=1
-           
-           
-           
- 
-            #time now
-            tE = time.time()
-            dt = tE-ts
-            self.time_elapsed += dt
- 
- 
-            return self.amove
-   
-        #print("Checking top left condition")
-        ## top left
-        if self.tileinBounds(x - 1, y + 1) and self.refLabel[x - 1, y + 1] == '':  
-           
-            #print("Hi welcome to the top left!")
-            self.refLabel[x - 1, y + 1] = 'U'
-            self.amove = Action(AI.Action.UNCOVER, x - 1, y + 1)
-            self.numUncoveredtiles +=1
- 
-           
- 
- 
-            tE = time.time()
-            dt = tE-ts
-            self.time_elapsed += dt
- 
-            return self.amove
-       
-        #print("Checking bottom left condition")
-        ## bottom left
-        if self.tileinBounds(x - 1, y - 1) and self.refLabel[x - 1, y - 1] == '':
-           
-            #print("hi welcome to the bottom left")
-            self.refLabel[x - 1, y  - 1] = 'U'
-            self.amove = Action(AI.Action.UNCOVER, x - 1, y - 1)
-            self.numUncoveredtiles +=1
- 
- 
-            tE = time.time()
-            dt = tE-ts
-            self.time_elapsed += dt
- 
-            return self.amove
-       
- 
-        # right side
- 
- 
-        ## right
-        #print("Checking right condition")
-        if self.tileinBounds(x + 1, y) and self.refLabel[x + 1, y] == '':  
-           
-           
-            #print("hi welcome to the right!")
-            self.refLabel[x + 1, y] = 'U'
-            self.amove = Action(AI.Action.UNCOVER, x + 1, y)
-            self.numUncoveredtiles +=1
- 
-           
- 
-            tE = time.time()
-            dt = tE-ts
-            self.time_elapsed += dt
- 
-            return self.amove
-       
-        ## top right
-        #print("Checking top right condition")
-        if self.tileinBounds(x + 1, y + 1)  and self.refLabel[x + 1, y + 1] == '':  
-           
-            #print("hi welcome to the top right")
- 
-            self.refLabel[x + 1, y + 1] = 'U'
-            self.amove = Action(AI.Action.UNCOVER, x + 1, y + 1)
-            self.numUncoveredtiles +=1
- 
-           
- 
-            tE = time.time()
-            dt = tE-ts
-            self.time_elapsed += dt
- 
-            return self.amove
-       
-        ## bottom right
-        #print("Checking bottom right condition")
-        if self.tileinBounds(x + 1, y - 1) and self.refLabel[x + 1, y - 1] == '':
- 
-            #print("hi welcome to the bottom right")
-            self.refLabel[x + 1, y - 1] = 'U'
-            self.amove = Action(AI.Action.UNCOVER, x + 1, y - 1)
-            self.numUncoveredtiles +=1
- 
- 
- 
-            tE = time.time()
-            dt = tE - ts
-            self.time_elapsed += dt
- 
-            return self.amove
-       
- 
-        #top
-        #print("Checking top condition")
-        if self.tileinBounds(x, y + 1) and self.refLabel[x, y + 1] == '':
-           
-            #print("hi welcome to top")
-            self.refLabel[x, y + 1] = 'U'
-            self.amove = Action(AI.Action.UNCOVER, x, y + 1)
-            self.numUncoveredtiles +=1
- 
-           
- 
-            tE = time.time()
-            dt = tE-ts
-            self.time_elapsed += dt
- 
-            return self.amove
- 
-        #bottom
-        #print("Checking bottom  condition")
-        if self.tileinBounds(x, y - 1) and self.refLabel[x, y - 1] == '':  
-           
-            #print("hi welcome bottom")
-            self.refLabel[x, y - 1] = 'U'
- 
-            self.amove = Action(AI.Action.UNCOVER, x, y - 1)
-            self.numUncoveredtiles +=1
- 
- 
-           
- 
-            tE = time.time()
-            dt = tE - ts
-            self.time_elapsed += dt
- 
-            return self.amove
-        #print("None of the conditions were satisfied")
-    def markedOrUnmarked(self, x, y):
-        i = 0 # marked with a flag
-        j = 0 # not marked with a flag
-        # left side
-        ## left
- 
- 
-        if self.tileinBounds(x - 1, y) and self.refLabel[x - 1, y] == 'F': # if valid move and flagged and not touched yet
-            i +=1
-       
-        if self.tileinBounds(x - 1, y) and self.refLabel[x - 1, y] == '': # if valid move and not touched yet
-            j +=1
- 
- 
-        ## top left
-        if self.tileinBounds(x - 1, y + 1) and self.refLabel[x - 1, y + 1] == 'F':
-            i +=1
-       
-        if self.tileinBounds(x - 1, y + 1) and self.refLabel[x - 1, y + 1] == '':
-            j +=1
- 
- 
-        ## bottom left
-        if self.tileinBounds(x - 1, y - 1) and self.refLabel[x - 1, y - 1] == 'F':
-            i +=1
- 
-        if self.tileinBounds(x - 1, y - 1) and self.refLabel[x - 1, y - 1] == '':
-            j +=1
- 
-        # right side
- 
-        ## right
-        if self.tileinBounds(x + 1, y) and self.refLabel[x + 1, y] == 'F':
-            i +=1
-        if self.tileinBounds(x + 1, y) and self.refLabel[x + 1, y] == '':
-            j +=1
-       
-        ## top right
-        if self.tileinBounds(x + 1, y + 1) and self.refLabel[x + 1, y + 1] == 'F':
-            i +=1
-        if self.tileinBounds(x + 1, y + 1) and self.refLabel[x + 1, y + 1] == '':
-            j +=1
- 
-        ## bottom right
-        if self.tileinBounds(x + 1, y - 1) and self.refLabel[x + 1, y - 1] == 'F':
-            i +=1
-        if self.tileinBounds(x + 1, y - 1) and self.refLabel[x + 1, y - 1] == '':
-            j +=1
- 
- 
-        #top
-        if self.tileinBounds(x, y + 1) and self.refLabel[x, y + 1] == 'F':
-            i +=1
- 
-        if self.tileinBounds(x, y + 1) and self.refLabel[x, y + 1] == '':
-            j +=1
- 
-        #bottom
-        if self.tileinBounds(x, y - 1) and self.refLabel[x, y - 1] == 'F':
-            i +=1
- 
-        if self.tileinBounds(x, y - 1) and self.refLabel[x, y - 1] == '':
-            j +=1
- 
-        return i, j
+    def countNoFlag(self, coords):
+        noFlag = 0
+        for x in coords:
+
+                
+            if self.refLabel[x[0], x[1]] == '':
+                noFlag +=1
+                
+        return noFlag
+    
+        
+    def getAdjacent(self, a, b):
+        
+        coords = [(x + a, y + b)
+                  for x in range(-1, 2) for y in range(-1, 2)
+                  if (x, y) != (0, 0)] # get all the adjacent
+
+        temp = [pair for pair in coords
+                if self.tileinBounds(pair[0], pair[1])] # return the valid adjacents
+        
+        my_list = list(set(temp))
+        
+        return temp
  
     #check if tile is in Bounds or not
     def tileinBounds(self, x, y):
-        if (x >= 0 and x < self.row) and (y >= 0 and y < self.col) :
-            return True
-        else:
-            #print("Tile is in bounds")
-            return False
+        return (x >= 0 and x < self.row) and (y >= 0 and y < self.col)
+            
+        
 
     def chooseRandom(self):
        
@@ -791,15 +365,14 @@ class MyAI( AI ):
             for y in range(0, self.col):
                 if self.refLabel[x, y] == '': # if empty string then we explore
                     explore.append((x, y))
+                    
+        #print(explore)
  
         coords = random.choice(explore)
- 
-       
-       
-       
-       
-       
-        return coords
+        self.refLabel[coords[0], coords[1]] == 'U'
+        self.moves.append(Action(AI.Action.UNCOVER, coords[0], coords[1]))
+        
+        #self.numUncoveredtiles += 1
         #self.action = Action(AI.Action.UNCOVER, randx, randy)
  
 #
