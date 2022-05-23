@@ -57,6 +57,8 @@ class MyAI( AI ):
         
         self.moves = [] # list all actions to do
         self.frontier_covered = [] # list of all covered frontiers
+        
+        self.frontier_covered.append(startX, startY)
         self.frontier_uncovered = set() # list 
         self.solvable = False
         self.p = 0 # probability of a mine 
@@ -135,18 +137,6 @@ class MyAI( AI ):
             
             return next_move
                 
-            
- 
-           
- 
- 
- 
- 
- 
- 
-       
-       
-       
         ########################################################################
         #                           YOUR CODE ENDS                             #
         ########################################################################
@@ -156,7 +146,7 @@ class MyAI( AI ):
         #print(self.frontier_covered)
         #print(self.frontier_uncovered)
         while True:
-            
+            print('hi im here :D')
             if len(self.moves) != 0: # has stuff to do
                 #print('has stuff to do')
                 
@@ -185,7 +175,7 @@ class MyAI( AI ):
             
             coords = self.frontier_covered.pop()
             
-            if self.refLabel[coords[0], coords[1]] == 'U':
+            if coords in self.frontier_uncovered:
                 continue
             
             self.ruleOfThumb(coords[0], coords[1])
@@ -265,7 +255,7 @@ class MyAI( AI ):
         if self.elabel[x, y] == 0: # effective label  == 0
             #print('effective == 0')
             for t in adj:
-                if self.refLabel[t[0], t[1]] == '': # if untouched
+                if t not in self.frontier_uncovered: # if untouched
                     
                     #print('undiscovered tile and now inserting')
                     self.moves.append(Action(AI.Action.UNCOVER, t[0], t[1]))
@@ -300,11 +290,11 @@ class MyAI( AI ):
         self.solvable = test
         
         for a in adj:
-            if a not in  self.frontier_covered:
+            if a not in self.frontier_uncovered:
                 self.frontier_covered.append(a) # get all the adjacents of the original adjacent as a frontier
         
         
-        if self.refLabel[x, y] == 'U':
+        if noFlag == 0:
             self.frontier_uncovered.add((x, y))
     
     
@@ -363,6 +353,7 @@ class MyAI( AI ):
  
         coords = random.choice(explore)
         self.refLabel[coords[0], coords[1]] == 'U'
+        self.frontier_covered.append((coords[0], coords[1]))
         self.moves.append(Action(AI.Action.UNCOVER, coords[0], coords[1]))
         
         #self.numUncoveredtiles += 1
