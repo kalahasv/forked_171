@@ -58,10 +58,11 @@ class MyAI( AI ):
         self.moves = [] # list all actions to do
         self.frontier_covered = [] # list of all covered frontiers
         
-        self.frontier_covered.append(startX, startY)
+        self.frontier_covered.append((startX, startY))
         self.frontier_uncovered = set() # list 
         self.solvable = False
         self.p = 0 # probability of a mine 
+        self.n = 0
         self.time_elapsed = 0.0
 
        
@@ -82,6 +83,7 @@ class MyAI( AI ):
         remaining_time = MAX_TIME - self.time_elapsed
  
         if(remaining_time < 3):
+            #print('too long guess')
             random_coords = self.chooseRandom()
             #print("hi")
             
@@ -95,7 +97,8 @@ class MyAI( AI ):
        
             #win condition= uncovered all except one tile
             
-            
+
+            #print('start now')
             
             if (self.row * self.col) - self.numOfMines == self.numUncoveredtiles:
                 #print('Done')
@@ -109,19 +112,22 @@ class MyAI( AI ):
                 self.refLabel[self.amove.getX(), self.amove.getY()] = 'U' # u indicates uncovered
                 self.label[self.amove.getX(), self.amove.getY()] = number # the number of adjacent bombs
 
+                #print(self.refLabel)
  
             #print('number of uncovered')
             #print(self.numUncoveredtiles)
             if len(self.moves) == 0:
                 #print('get moves')
                 self.find_moves() # get some moves
-                
+
+                #print('out of finding moves')
                 if len(self.moves) == 0:   
                     
                     #print('cannot find any')
                     return Action(AI.Action.LEAVE)
                 
             if len(self.moves) == 0 and len(self.frontier_uncovered) == 1:
+                #print('simple prob')
                 self.getSimpleProb()
                 t = self.applyOpeningProb
                 
@@ -129,7 +135,7 @@ class MyAI( AI ):
                     
             
                     
-
+            #print('poppping')
                 
             next_move = self.moves.pop()
                 
@@ -142,14 +148,21 @@ class MyAI( AI ):
         ########################################################################
         
     def find_moves(self):
+        print('hi im here :D')
+        
+            
         
         #print(self.frontier_covered)
         #print(self.frontier_uncovered)
         while True:
-            print('hi im here :D')
+            
+            if self.n == 50:
+                return Action(AI.Action.LEAVE)
+            
+            
             if len(self.moves) != 0: # has stuff to do
                 #print('has stuff to do')
-                
+
                 return
             
             self.numTiles()
@@ -161,10 +174,11 @@ class MyAI( AI ):
             
             if len(self.frontier_covered) == 0: # frontier is empty
                 
+                #print('frontier empty so we scan again')
                 
                 self.scan() # find a move
                 
-                if len(self.frontier_covered) == 0 and len(self.moves) == 0: # if still cannot find a move do a random move
+                if len(self.frontier_covered) == 0 or len(self.moves) == 0: # if still cannot find a move do a random move
                     
                     
                     
@@ -175,10 +189,12 @@ class MyAI( AI ):
             
             coords = self.frontier_covered.pop()
             
-            if coords in self.frontier_uncovered:
+            if coords in self.frontier_uncovered or self.refLabel[coords[0], coords[1]] == 'U':
                 continue
             
             self.ruleOfThumb(coords[0], coords[1])
+            
+            self.n += 1
             
                 
             
@@ -227,6 +243,7 @@ class MyAI( AI ):
         
         
     def scan(self):
+        #print('scanning')
         for i in range(self.row):
             for j in range(self.col):
                 
@@ -243,6 +260,9 @@ class MyAI( AI ):
         noFlag = self.countNoFlag(adj) # get all the number of no flags of the current move
         yesFlag = self.countFlag(adj) # get all the number of flags of the current move
         
+        #print(x, y)
+        
+        #print(adj)
         ## effective label
         self.elabel[x, y] = self.label[x, y] - yesFlag
         
@@ -255,7 +275,7 @@ class MyAI( AI ):
         if self.elabel[x, y] == 0: # effective label  == 0
             #print('effective == 0')
             for t in adj:
-                if t not in self.frontier_uncovered: # if untouched
+                if t not in self.frontier_uncovered or self.refLabel[t[0], t[1]] == '': # if untouched
                     
                     #print('undiscovered tile and now inserting')
                     self.moves.append(Action(AI.Action.UNCOVER, t[0], t[1]))
@@ -290,7 +310,7 @@ class MyAI( AI ):
         self.solvable = test
         
         for a in adj:
-            if a not in self.frontier_uncovered:
+            if a not in self.frontier_uncovered or self.refLabel[a[0], a[1]] == 'U' :
                 self.frontier_covered.append(a) # get all the adjacents of the original adjacent as a frontier
         
         
