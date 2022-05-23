@@ -113,7 +113,7 @@ class MyAI( AI ):
                 self.label[self.amove.getX(), self.amove.getY()] = number # the number of adjacent bombs
 
                 #print(self.refLabel)
- 
+            self.scan() # find a move
             #print('number of uncovered')
             #print(self.numUncoveredtiles)
             if len(self.moves) == 0:
@@ -140,6 +140,8 @@ class MyAI( AI ):
             next_move = self.moves.pop()
                 
             self.amove = next_move
+           # print("uncovered:",self.frontier_uncovered)
+           # print("covered:",self.frontier_covered)
             
             return next_move
                 
@@ -148,7 +150,7 @@ class MyAI( AI ):
         ########################################################################
         
     def find_moves(self):
-        print('hi im here :D')
+        #print('hi im here :D')
         
             
         
@@ -156,8 +158,9 @@ class MyAI( AI ):
         #print(self.frontier_uncovered)
         while True:
             
-            if self.n == 50:
-                return Action(AI.Action.LEAVE)
+            
+            #if self.n == 50:
+                #return Action(AI.Action.LEAVE)
             
             
             if len(self.moves) != 0: # has stuff to do
@@ -189,12 +192,12 @@ class MyAI( AI ):
             
             coords = self.frontier_covered.pop()
             
-            if coords in self.frontier_uncovered or self.refLabel[coords[0], coords[1]] == 'U':
-                continue
+           # if coords in self.frontier_uncovered or self.refLabel[coords[0], coords[1]] == 'U':
+            #    continue
             
             self.ruleOfThumb(coords[0], coords[1])
             
-            self.n += 1
+            #self.n += 1
             
                 
             
@@ -275,9 +278,11 @@ class MyAI( AI ):
         if self.elabel[x, y] == 0: # effective label  == 0
             #print('effective == 0')
             for t in adj:
-                if t not in self.frontier_uncovered or self.refLabel[t[0], t[1]] == '': # if untouched
+                if self.refLabel[t[0], t[1]] == '': # if untouched
                     
                     #print('undiscovered tile and now inserting')
+                    #print("uncovered:",self.frontier_uncovered)
+                    #print("covered:",self.frontier_covered)
                     self.moves.append(Action(AI.Action.UNCOVER, t[0], t[1]))
                     #self.refLabel[x[0], x[1]] = 'U'
                     #self.frontier_covered.append(x) # frontier covered around the 
@@ -310,7 +315,7 @@ class MyAI( AI ):
         self.solvable = test
         
         for a in adj:
-            if a not in self.frontier_uncovered or self.refLabel[a[0], a[1]] == 'U' :
+            if a not in self.frontier_uncovered:
                 self.frontier_covered.append(a) # get all the adjacents of the original adjacent as a frontier
         
         
