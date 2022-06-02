@@ -36,6 +36,7 @@ class MyAI( AI ):
         self.numOfMines = totalMines
         self.numOfFlag = 0 #should be one by the end
         self.numUncoveredtiles = 1
+        self.debugMoves = []
         #self.unTiles = []
         #self.flag = []
  
@@ -136,9 +137,15 @@ class MyAI( AI ):
             
                     
             #print('poppping')
-                
-            next_move = self.moves.pop()
-                
+            
+            non_dupes = []
+            [non_dupes.append(x) for x in self.moves if x not in non_dupes]
+            non_dupes_debug = []
+            [non_dupes_debug.append(x) for x in self.debugMoves if x not in non_dupes_debug]
+            #next_move = self.moves.pop()
+            next_move = non_dupes.pop()
+            print(non_dupes_debug)
+            self.debugMoves.pop()
             self.amove = next_move
            # print("uncovered:",self.frontier_uncovered)
            # print("covered:",self.frontier_covered)
@@ -148,7 +155,65 @@ class MyAI( AI ):
         ########################################################################
         #                           YOUR CODE ENDS                             #
         ########################################################################
+    
+    def all_equal(self, iterator):
+        iterator = iter(iterator)
+        try:
+            first = next(iterator) 
+        except StopIteration:
+            return True
+        return all(first == x for x in iterator)
         
+    def find_min_moves(self):
+        
+        #print('hi im here')
+        coords = []
+        
+        #print('coords')
+        for x in range(self.row):
+            for y in range(self.col):
+                if self.refLabel[x, y] == '':
+                    coords.append((x, y))
+    
+        #print('get coords')
+        #print(coords)
+        vals = []         
+        for i in coords:
+            adj = self.getAdjacent(i[0], i[1])
+            temp = 0
+            for j in adj:
+                if self.label[j[0], j[1]] >=0:
+                    temp += self.label[j[0], j[1]]
+                    
+            vals.append(temp)
+        
+        t = self.all_equal(vals) 
+        
+        if t: # if it is true then all the values in he list are the same therefore cannot simply choose one
+            
+            print('false')
+            return False
+            
+            
+        min_val = min(vals)
+        
+        
+        min_index = vals.index(min_val) # once we find the min values it has the less possibility of being a bomb?
+            
+            
+        x = coords[min_index]
+        print(x)
+            
+        self.moves.append(Action(AI.Action.UNCOVER, x[0], x[1]))
+        self.debugMoves.append([x[0],x[1]])
+        self.refLabel[x[0], x[1]] == 'U'
+        self.frontier_covered.append((x[0], x[1]))
+        return True
+            
+            
+        
+                
+                
     def find_moves(self):
         #print('hi im here :D')
         
@@ -183,10 +248,16 @@ class MyAI( AI ):
                 
                 if len(self.frontier_covered) == 0 or len(self.moves) == 0: # if still cannot find a move do a random move
                     
+                    print('Find lowest :c')
+                    a = self.find_min_moves() ## get the lowest  adjacent number of bombs
+                    if a == True:
+                        print('return')
+                        return
                     
+                    if len(self.moves) == 0 or a == False: 
                     
-                    #print('random')
-                    self.chooseRandom()
+                        print('random')
+                        self.chooseRandom()
                     
                     return
             
@@ -207,7 +278,7 @@ class MyAI( AI ):
         num = 0
         for x in range(self.row):
             for y in range(self.col):
-                if self.refLabel == '':
+                if self.refLabel[x, y] == '':
                     num +=1
                     
         self.p = n / num
@@ -223,8 +294,10 @@ class MyAI( AI ):
             
             explore = self.getAdjacent(self.amove.getX(), self.amove.getY())
             coords = random.choice(explore)
+            print("Applying opening probability")
             
             self.moves.append(Action(AI.Action.UNCOVER, coords[0], coords[1]))
+            self.debugMoves.append([coords[0],coords[1]])
             self.refLabel[coords[0], coords[1]] = 'U'
             
             return True
@@ -280,10 +353,18 @@ class MyAI( AI ):
             for t in adj:
                 if self.refLabel[t[0], t[1]] == '': # if untouched
                     
-                    #print('undiscovered tile and now inserting')
+                    print('undiscovered tile and now inserting',t[0]," ",t[1])
                     #print("uncovered:",self.frontier_uncovered)
                     #print("covered:",self.frontier_covered)
+                    #this is where dupes check        
                     self.moves.append(Action(AI.Action.UNCOVER, t[0], t[1]))
+                    # check = [1,t[0],t[1]]
+                    #if check not in self.moves:
+                         # self.moves.append([1,t[0],t[1]])
+                    # move = self.moves.pop
+                    # if(move[0] == 1):
+                    #   (Action.UNCOVER,move[1],move[2])
+                    self.debugMoves.append([t[0],t[1]])
                     #self.refLabel[x[0], x[1]] = 'U'
                     #self.frontier_covered.append(x) # frontier covered around the 
                     #self.numUncoveredtiles += 1
@@ -299,6 +380,7 @@ class MyAI( AI ):
                     
                     #print('undiscovered tile and now inserting')
                     self.moves.append(Action(AI.Action.FLAG, t[0], t[1]))
+                    self.debugMoves.append('FLAG',t[0,t[1]])
                     self.refLabel[t[0], t[1]] = 'F'
                     
                 temporary = self.getAdjacent(t[0], t[1])
@@ -315,7 +397,7 @@ class MyAI( AI ):
         self.solvable = test
         
         for a in adj:
-            if a not in self.frontier_uncovered:
+            if a not in self.frontier_uncovered or a not in self.frontier_covered:
                 self.frontier_covered.append(a) # get all the adjacents of the original adjacent as a frontier
         
         
@@ -379,7 +461,9 @@ class MyAI( AI ):
         coords = random.choice(explore)
         self.refLabel[coords[0], coords[1]] == 'U'
         self.frontier_covered.append((coords[0], coords[1]))
+        print("CHOSE RANDOMLY")
         self.moves.append(Action(AI.Action.UNCOVER, coords[0], coords[1]))
+        self.debugMoves.append
         
         #self.numUncoveredtiles += 1
         #self.action = Action(AI.Action.UNCOVER, randx, randy)

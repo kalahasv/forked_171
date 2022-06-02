@@ -116,6 +116,8 @@ def main():
 						scoreInt += 1
 					elif score == 3:
 						scoreExp += 1
+					else:
+						print("Failed World:",filename)
 
 					numScores += 1
 					sumScores += score
