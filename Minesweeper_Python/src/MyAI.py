@@ -189,31 +189,44 @@ class MyAI( AI ):
     
         #print('get coords')
         #print(coords)
-        vals = []         
+        vals = []
+        new_coords = []      
         for i in coords:
             adj = self.getAdjacent(i[0], i[1])
-            temp = 0
-            for j in adj:
-                if self.label[j[0], j[1]] >=0:
-                    temp += self.label[j[0], j[1]]
+
+            checker = False
+            for j in adj:   
+                if self.refLabel[j[0],j[1]] != '':
+                    new_coords.append(i)
+                    checker = True
+                    break
+            
+            if checker:
+                temp = 0
+                for j in adj:
+                    if self.label[j[0], j[1]] >=0 :
+                        temp += self.label[j[0], j[1]]
                     
-            vals.append(temp)
+                vals.append(temp)
+            else:
+                continue
         
         t = self.all_equal(vals) 
         
         if t: # if it is true then all the values in he list are the same therefore cannot simply choose one
             
-            print('false')
+            #print('false')
             return False
-            
-            
+        
+        #print(new_coords)
+        #print(vals)    
         min_val = min(vals)
         
         
         min_index = vals.index(min_val) # once we find the min values it has the less possibility of being a bomb?
             
             
-        x = coords[min_index]
+        x = new_coords[min_index]
         #print(x)
             
         self.actionMoves.append([1, x[0], x[1]])
