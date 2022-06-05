@@ -103,7 +103,7 @@ class MyAI( AI ):
             
 
             #print('start now')
-            
+            self.numTiles()
             if (self.row * self.col) - self.numOfMines == self.numUncoveredtiles:
                 #print('Done')
                 return Action(AI.Action.LEAVE)
@@ -113,8 +113,8 @@ class MyAI( AI ):
            
             if number != -1: # if the number is non negative then we work on the board
  
-                self.refLabel[self.amove.getX(), self.amove.getY()] = 'U' # u indicates uncovered
-                self.label[self.amove.getX(), self.amove.getY()] = number # the number of adjacent bombs
+                self.refLabel[ self.amove.getY(), self.amove.getX()] = 'U' # u indicates uncovered
+                self.label[ self.amove.getY(), self.amove.getX()] = number # the number of adjacent bombs
 
                 #print(self.refLabel)
             self.scan() # find a move
@@ -314,14 +314,14 @@ class MyAI( AI ):
         
     
     def applyOpeningProb(self):
-        num = self.label[self.amove.getX(), self.amove.getY()]
+        num = self.label[self.amove.getY(), self.amove.getX()]
         
-        adj = self.getAdjacent(self.amove.getX(), self.amove.getY())
+        adj = self.getAdjacent(self.amove.getY(), self.amove.getX())
         
         
         if num / len(adj) < self.p: # uncover one of the random spots around the tile
             
-            explore = self.getAdjacent(self.amove.getX(), self.amove.getY())
+            explore = self.getAdjacent( self.amove.getY(), self.amove.getX())
             coords = random.choice(explore)
             #print("Applying opening probability")
             
