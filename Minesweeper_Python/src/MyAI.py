@@ -245,8 +245,8 @@ class MyAI( AI ):
             if checker:
                 temp = 0
                 for j in adj:
-                    if self.label[j[0], j[1]] >=0 :
-                        temp += self.label[j[0], j[1]]
+                    if self.elabel[j[0], j[1]] >=0 :
+                        temp += self.elabel[j[0], j[1]]
                     
                 vals.append(temp)
             else:
