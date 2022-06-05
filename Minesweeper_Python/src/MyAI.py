@@ -9,11 +9,17 @@
 # DESCRIPTION:  This file contains the MyAI class. You will implement your
 #               agent in this file. You will write the 'getAction' function,
 #               the constructor, and any additional helper functions.
-#
+#``
 # NOTES:        - MyAI inherits from the abstract AI class in AI.py.
 #
 #               - DO NOT MAKE CHANGES TO THIS FILE.
 # ==============================CS-199==================================
+
+
+#The way the array palces things -> [ row, column ]
+#The way traditional coordinates work ---> [ row, column ]  (5th row, 2nd column)
+# The way their startX --> corresonds to column 
+#Start Y corresponds to row 
  
 from http.client import FOUND
 from re import A
@@ -27,13 +33,16 @@ import time
  
  
 class MyAI( AI ):
- 
+  #startX -> 
+  #X-> corresponds to the column
+  #Y needs to be row 
     def __init__(self, rowDimension, colDimension, totalMines, startX, startY):
-        start_temp = startX
-        startX = startY
-        startY = start_temp
+        #print('start')
+        
+        #column, row 
+        #print("Intial Coordinates:",startY," ", startX)
 
-        self.initalCoords = [startX,startY]
+        self.initalCoords = [startY, startX]
         self.row = rowDimension
         self.col = colDimension
         self.numOfMines = totalMines
@@ -49,20 +58,30 @@ class MyAI( AI ):
         ## 1. Uncovered tile
         ## 2. flagged tile
         ## 3. untouched tile
- 
+
+        
         self.label = np.full((rowDimension, colDimension), -1)
         self.elabel = np.full((rowDimension, colDimension), -1)
         self.refLabel = np.full((rowDimension, colDimension), '') # this creates a reference board, an empty string indicates the tile has not been touched yet
+        #print("Row:",colDimension," Column:",rowDimension)
         # we can label each tile as a flagged and uncovered
-
-       
+    
+        #print('doing an action')
+        #Actual board -> row, column 
         self.amove = Action(AI.Action.UNCOVER, startX, startY) #uncovers the first move tile
-        self.refLabel[startX, startY] = 'U'
+
+    
+        #print('first ref label')
+        #print("Coords:",startY," ",startX)
+        self.refLabel[startY, startX] = 'U'
         
         self.moves = [] # list all actions to do
         self.frontier_covered = [] # list of all covered frontiers
         self.actionMoves = []
-        self.frontier_covered.append((startX, startY)) # list of values that can have adjacent nodes to be explored
+
+
+        self.actionMoves.append([1, startY, startX])
+        self.frontier_covered.append((startY, startX)) # list of values that can have adjacent nodes to be explored
         self.frontier_uncovered = set() # set of values that should not be explored
         self.solvable = False
         self.p = 0 # probability of a mine 
@@ -81,7 +100,7 @@ class MyAI( AI ):
  
        
     def getAction(self, number: int):
-        print("New action starting!")
+        #print("New action starting!")
         #Note: The max time I'm putting rn is arbitrary since idk how much time there really is
         MAX_TIME = 1000
         remaining_time = MAX_TIME - self.time_elapsed
@@ -104,6 +123,8 @@ class MyAI( AI ):
 
             #print('start now')
             self.numTiles()
+
+            
             if (self.row * self.col) - self.numOfMines == self.numUncoveredtiles:
                 #print('Done')
                 return Action(AI.Action.LEAVE)
@@ -112,16 +133,31 @@ class MyAI( AI ):
             #uncovered = [] #tiles uncovered relative to start position
            
             if number != -1: # if the number is non negative then we work on the board
- 
-                self.refLabel[ self.amove.getY(), self.amove.getX()] = 'U' # u indicates uncovered
-                self.label[ self.amove.getY(), self.amove.getX()] = number # the number of adjacent bombs
+                #getX -> row
+                #getY -> column 
+                #print("Get Coordinates",self.amove.getX(), self.amove.getY())
 
+                #print("Refence board dimensions:",len(self.refLabel),len(self.refLabel[0]))
+                #self. refLabel board -> 0-29 
+                self.refLabel[ self.amove.getY(), self.amove.getX()] = 'U' # u indicates uncovered
+
+                #print("Ref label is the issue")
+                
+                self.label[ self.amove.getY(), self.amove.getX()] = number # the number of adjacent bombs
+                #print("Label is correct")
                 #print(self.refLabel)
+
+
+            #print('scan')
             self.scan() # find a move
+
+            #print('finish scanning')                                                                                                                                  
             #print('number of uncovered')
             #print(self.numUncoveredtiles)
+
+            #print(self.actionMoves)
             if len(self.actionMoves) == 0:
-                #print('get moves')
+                #print('find_moves')
                 self.find_moves() # get some moves
 
                 #print('out of finding moves')
@@ -151,7 +187,8 @@ class MyAI( AI ):
             test = self.actionMoves.pop()
             
             if test[0] == 1:
-                print("Coordinates",test[1],test[2])
+                #print("Coordinates",test[1],test[2])
+                #UNCOVER -> y, x column, row 
                 next_move = Action(AI.Action.UNCOVER, test[2], test[1])
                 
             elif test[0] == 0: #flag
@@ -234,7 +271,7 @@ class MyAI( AI ):
         #print(x)
             
         self.actionMoves.append([1, x[0], x[1]])
-        self.debugMoves.append([x[0],x[1]])
+        #self.debugMoves.append([x[0],x[1]])
         self.refLabel[x[0], x[1]] == 'U'
         self.frontier_covered.append((x[0], x[1]))
         return True
@@ -365,6 +402,8 @@ class MyAI( AI ):
         noFlag = self.countNoFlag(adj) # get all the number of no flags of the current move
         yesFlag = self.countFlag(adj) # get all the number of flags of the current move
         
+
+
         #print(x, y)
         
         #print(adj)
@@ -373,6 +412,7 @@ class MyAI( AI ):
         #print(self.frontier_covered)
         self.elabel[x, y] = self.label[x, y] - yesFlag
         
+        #print(self.elabel[x, y])
         #print(x, y)
         if self.label[x, y] < 0:
             #print('big oof')
