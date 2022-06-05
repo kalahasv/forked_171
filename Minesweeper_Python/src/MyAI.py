@@ -29,7 +29,10 @@ import time
 class MyAI( AI ):
  
     def __init__(self, rowDimension, colDimension, totalMines, startX, startY):
- 
+        start_temp = startX
+        startX = startY
+        startY = start_temp
+
         self.initalCoords = [startX,startY]
         self.row = rowDimension
         self.col = colDimension
@@ -78,7 +81,7 @@ class MyAI( AI ):
  
        
     def getAction(self, number: int):
- 
+        print("New action starting!")
         #Note: The max time I'm putting rn is arbitrary since idk how much time there really is
         MAX_TIME = 1000
         remaining_time = MAX_TIME - self.time_elapsed
@@ -148,10 +151,11 @@ class MyAI( AI ):
             test = self.actionMoves.pop()
             
             if test[0] == 1:
-                next_move = Action(AI.Action.UNCOVER, test[1], test[2])
+                print("Coordinates",test[1],test[2])
+                next_move = Action(AI.Action.UNCOVER, test[2], test[1])
                 
             elif test[0] == 0: #flag
-                next_move = Action(AI.Action.FLAG, test[1], test[2])
+                next_move = Action(AI.Action.FLAG, test[2], test[1])
                 
             #next_move = self.moves.pop()
             
@@ -321,7 +325,7 @@ class MyAI( AI ):
             coords = random.choice(explore)
             #print("Applying opening probability")
             
-            self.moves.append(Action(AI.Action.UNCOVER, coords[0], coords[1]))
+            self.actionMoves.append([1, coords[0], coords[1]])
             self.debugMoves.append([coords[0],coords[1]])
             self.refLabel[coords[0], coords[1]] = 'U'
             
@@ -490,8 +494,9 @@ class MyAI( AI ):
  
     #check if tile is in Bounds or not
     def tileinBounds(self, x, y):
+        
         return (x >= 0 and x < self.row) and (y >= 0 and y < self.col)
-            
+           
         
 
     def chooseRandom(self):
