@@ -22,6 +22,7 @@
 #Start Y corresponds to row 
  
 from http.client import FOUND
+from platform import java_ver
 from re import A
 from socket import if_indextoname
 
@@ -209,6 +210,114 @@ class MyAI( AI ):
         #                           YOUR CODE ENDS                             #
         ########################################################################
     
+    
+    def logic(self):
+        
+        #print('logic')
+        coords = [] # get all the untouched coordinates
+        for x in range(self.row):
+            for y in range(self.col):
+                if self.refLabel[x, y] == '':
+                    coords.append((x, y))
+                    
+        
+        new_coords = [] # get all the untouched coordinates next to an uncovered one   
+        for i in coords:
+            adj = self.getAdjacent(i[0], i[1])
+
+            
+            for j in adj:   
+                if self.refLabel[j[0],j[1]] == 'U':
+                    
+                    if (j[0],j[1]) not in new_coords:
+                        new_coords.append((j[0],j[1])) # the uncovered one make sure has no repeats
+                    
+        
+        print(new_coords)
+        for i in new_coords:
+            adj = self.getAdjacent(i[0], i[1])
+            temp_uncovered = []
+            temp_covered = []
+            temp_eflabel = []
+            
+            locations = []
+            
+            temp_eflabel.append(self.elabel[i[0], i[1]]) # append effective label of the first frontier to explore
+            
+            for j in adj:
+                
+                    
+                if (j[0], j[1]) in new_coords: # get all the uncovered adjacents by the frontier
+                    temp_uncovered.append( (j[0],j[1] ))
+                    
+                    
+                if self.refLabel[j[0],j[1]] == '': # get all the covered frontier adjacents
+                    temp_covered.append( (j[0],j[1]))
+            
+            
+            locations.append(set(temp_covered)) # append the coordinates that is the adjacent of the effective label of the first frontier 
+            
+            
+            
+            for y in temp_uncovered: # get all the covered adjacent from the uncovered adjacent of the first coordinate
+                temp_uncovered_covered = [] # needs to reset after every neighboring tile
+                
+                temp_eflabel.append(self.elabel[y[0], y[1]]) # get the effective label of the neighboring uncovered tiles
+                
+                adj2 = self.getAdjacent(y[0], y[1]) # get the adjacents 
+                
+                for z in adj2:
+                    
+                    if self.refLabel[z[0],z[1]] == '': # get all the covered adjacents
+                        temp_uncovered_covered.append( (z[0], z[1]))
+                    
+                locations.append(set(temp_uncovered_covered))
+                
+                
+            
+            for n in range(len(locations)):
+                
+                for m in range(len(locations)):
+                    
+                    if m != n:
+                        
+                        val = set(locations[n]).issubset(locations[m])
+                        
+                        if val:
+                            
+                            checker = temp_eflabel[n] - temp_eflabel[m]
+                            
+                            
+                            if checker == 0:
+                                
+                                temp_set1 = set(locations[m])
+                                temp_set2 = set(locations[n])
+                                
+                                temp_set = temp_set1 - temp_set2
+                                
+                                
+                                temp_set = list(temp_set)
+                                
+                                
+                                for l in temp_set:
+                                    print(i)
+                                    
+                                    print(l)
+                                    self.actionMoves.append([1, l[0], l[1]]) # for each of the valid coordinates, uncover them
+                                    
+                                    return True
+                                
+        return False
+                            
+            
+            
+            
+            
+                    
+            
+            
+            
+        
     def all_equal(self, iterator):
         iterator = iter(iterator)
         try:
@@ -218,6 +327,68 @@ class MyAI( AI ):
         return all(first == x for x in iterator)
         
     def find_min_moves(self):
+        
+        #print('hi im here')
+        coords = []
+        
+        #print('coords')
+        for x in range(self.row):
+            for y in range(self.col):
+                if self.refLabel[x, y] == '':
+                    coords.append((x, y))
+                    
+        
+    
+        #print('get coords')
+        #print(coords)
+        vals = []
+        new_coords = []      
+        for i in coords:
+            adj = self.getAdjacent(i[0], i[1])
+
+            checker = False
+            for j in adj:   
+                if self.refLabel[j[0],j[1]] != '':
+                    new_coords.append(i)
+                    checker = True
+                    break
+            
+            if checker:
+                temp = 0
+                for j in adj:
+                    if self.label[j[0], j[1]] >=0 :
+                        temp += self.label[j[0], j[1]]
+                    
+                vals.append(temp)
+            else:
+                continue
+        
+        t = self.all_equal(vals) 
+        
+        if t: # if it is true then all the values in he list are the same therefore cannot simply choose one
+            
+            #print('false')
+            return False
+        
+        #print(new_coords)
+        #print(vals)    
+        min_val = min(vals)
+        
+        
+        min_index = vals.index(min_val) # once we find the min values it has the less possibility of being a bomb?
+            
+            
+        x = new_coords[min_index]
+        #print(x)
+            
+        self.actionMoves.append([1, x[0], x[1]])
+        #self.debugMoves.append([x[0],x[1]])
+        self.refLabel[x[0], x[1]] == 'U'
+        self.frontier_covered.append((x[0], x[1]))
+        return True
+        
+        
+    def find_min_moves2(self):
         
         #print('hi im here')
         coords = []
@@ -237,12 +408,90 @@ class MyAI( AI ):
 
             checker = False
             for j in adj:   
-                if self.refLabel[j[0],j[1]] != '':
-                    new_coords.append(i)
-                    checker = True
+                
+                
+                if self.refLabel[j[0],j[1]] == 'F':
+                    #print('found flag')
+                    checker = False
                     break
+                
+                if self.refLabel[j[0],j[1]] != '':
+                    
+                    checker = True
+                    
+            
             
             if checker:
+                temp = 0
+                
+                for j in adj:
+                    if self.elabel[j[0], j[1]] >=0:
+                        temp += self.elabel[j[0], j[1]]
+                    
+
+
+                
+
+                new_coords.append(i)
+                vals.append(temp)
+            else:
+                continue
+        
+        t = self.all_equal(vals) 
+        
+        if t: # if it is true then all the values in he list are the same therefore cannot simply choose one
+            
+            #print('false')
+            return False
+        
+        #print(new_coords)
+        #print(vals)    
+        min_val = min(vals)
+        
+        
+        min_index = vals.index(min_val) # once we find the min values it has the less possibility of being a bomb?
+            
+            
+        x = new_coords[min_index]
+        #print(x)
+            
+        self.actionMoves.append([1, x[0], x[1]])
+        #self.debugMoves.append([x[0],x[1]])
+        self.refLabel[x[0], x[1]] == 'U'
+        self.frontier_covered.append((x[0], x[1]))
+        return True
+        
+    def find_min_moves3(self):
+        
+        #print('hi im here')
+        coords = []
+        
+        #print('coords')
+        for x in range(self.row):
+            for y in range(self.col):
+                if self.refLabel[x, y] == '':
+                    coords.append((x, y))
+    
+        #print('get coords')
+        #print(coords)
+        vals = []
+        new_coords = []      
+        for i in coords:
+            adj = self.getAdjacent(i[0], i[1])
+
+            checker = False
+            for j in adj:   
+                
+                #if self.refLabel[j[0],j[1]] == 'F':
+                    #checker = False
+                    #break
+                if self.refLabel[j[0],j[1]] != '':
+                    
+                    checker = True
+                    
+            
+            if checker:
+                new_coords.append(i)
                 temp = 0
                 for j in adj:
                     if self.elabel[j[0], j[1]] >=0 :
@@ -274,12 +523,8 @@ class MyAI( AI ):
         #self.debugMoves.append([x[0],x[1]])
         self.refLabel[x[0], x[1]] == 'U'
         self.frontier_covered.append((x[0], x[1]))
-        return True
-            
-            
-        
-                
-                
+        return True            
+    
     def find_moves(self):
         #print('hi im here :D')
         
@@ -315,11 +560,23 @@ class MyAI( AI ):
                 if len(self.frontier_covered) == 0 or len(self.actionMoves) == 0: # if still cannot find a move do a random move
                     
                     #print('Find lowest :c')
-                    a = self.find_min_moves() ## get the lowest  adjacent number of bombs
+                    value = self.numTilesLeft()
+                    
+                    #print(self.numUncoveredtiles)
+                    #print((self.row * self.col) - value)
+                    if (self.row * self.col) - value <= 15:
+                        
+                        #print('here')
+                        a = self.logic()
+                        if a:
+                            return
+                    
+                    print('imma find_min_moves3 me')    
+                    a = self.find_min_moves3() ## get the lowest  adjacent number of bombs
                     if a == True:
                         #print('return')
                         return
-                    
+
                     if len(self.actionMoves) == 0 or a == False: 
                     
                         #print('random')
@@ -369,6 +626,16 @@ class MyAI( AI ):
             return True
         else:
             return False
+        
+    def numTilesLeft(self):
+        num = 0
+        for x in range(self.row):
+            for y in range(self.col):
+                if self.refLabel[x, y] != '':
+                    num += 1
+        #print(self.refLabel)
+        
+        return num
         
         
     def numTiles(self):
